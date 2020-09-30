@@ -12,7 +12,7 @@ import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/ITokensTypeStorage.sol";
 import "../interfaces/IMerkleTreeTokensVerification.sol";
-
+import "../../../defi/pancake/IPancakeRouter.sol";
 
 contract ExchangePortal is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
@@ -24,6 +24,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // Contract for merkle tree white list verification
   IMerkleTreeTokensVerification public merkleTreeWhiteList;
+
+
+  IPancakeRouter pancakeRouter;
+  address pancakeWETH;
 
   // This contract recognizes ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -55,12 +59,16 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   constructor(
     address _tokensTypes,
-    address _merkleTreeWhiteList
+    address _merkleTreeWhiteList,
+    address _pancakeRouter,
+    address _pancakeWETH
     )
     public
   {
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
+    pancakeRouter = IPancakeRouter(_pancakeRouter);
+    pancakeWETH = _pancakeWETH;
   }
 
 
@@ -109,7 +117,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       require(msg.value == 0);
     }
 
-    // IMPLEMENT TRADE HERE
+    // TRADE
+    tradeViaPancake(_source, _sourceAmount, _destination);
 
     // Additional check
     require(receivedAmount > 0, "received amount can not be zerro");
@@ -134,6 +143,33 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       receivedAmount,
       uint8(_type)
     );
+  }
+
+  function tradeViaPancake(
+    IERC20 _source,
+    uint256 _sourceAmount,
+    IERC20 _destination
+  ) private
+    returns(uint256)
+  {
+    address[] memory path = new address[](2);
+    path[0] = _source == ETH_TOKEN_ADDRESS ? pancakeWETH : address(_source);
+    path[1] = _destination == ETH_TOKEN_ADDRESS ? pancakeWETH : address(_destination);
+
+    if(_source == ETH_TOKEN_ADDRESS){
+      // payable
+      swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
+    }else if(_destination == ETH_TOKEN_ADDRESS){
+      swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
+    }else{
+      swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+      )
+    }
   }
 
   // Facilitates for send source remains
