@@ -150,25 +150,35 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     uint256 _sourceAmount,
     IERC20 _destination
   ) private
-    returns(uint256)
+    returns(uint256 receivedAmount)
   {
     address[] memory path = new address[](2);
     path[0] = _source == ETH_TOKEN_ADDRESS ? pancakeWETH : address(_source);
     path[1] = _destination == ETH_TOKEN_ADDRESS ? pancakeWETH : address(_destination);
 
+    uint256 amountOutMin = 1;
+    uint256 deadline = now + 15 minutes;
+
     if(_source == ETH_TOKEN_ADDRESS){
-      // payable
-      swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
-    }else if(_destination == ETH_TOKEN_ADDRESS){
-      swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
+      pancakeRouter.value(_sourceAmount).swapExactETHForTokens(amountOutMin, path, address(this), deadline);
+    }
+    else if(_destination == ETH_TOKEN_ADDRESS){
+      pancakeRouter.swapExactTokensForETH(_sourceAmount, amountOutMin, path, address(this), deadline);
+    }
+    else{
+      pancakeRouter.swapExactTokensForTokens(
+        _sourceAmount,
+        amountOutMin,
+        path,
+        address(this),
+        deadline
+      );
+    }
+
+    if(_destination == ETH_TOKEN_ADDRESS){
+      receivedAmount = address(this).balance;
     }else{
-      swapExactTokensForTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-      )
+      receivedAmount = _destination.balanceOf(address(this));
     }
   }
 
