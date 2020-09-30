@@ -163,9 +163,13 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       pancakeRouter.value(_sourceAmount).swapExactETHForTokens(amountOutMin, path, address(this), deadline);
     }
     else if(_destination == ETH_TOKEN_ADDRESS){
+      _transferFromSenderAndApproveTo(_source, uint256 _sourceAmount, address(pancakeRouter))
+
       pancakeRouter.swapExactTokensForETH(_sourceAmount, amountOutMin, path, address(this), deadline);
     }
     else{
+      _transferFromSenderAndApproveTo(_source, uint256 _sourceAmount, address(pancakeRouter))
+      
       pancakeRouter.swapExactTokensForTokens(
         _sourceAmount,
         amountOutMin,
