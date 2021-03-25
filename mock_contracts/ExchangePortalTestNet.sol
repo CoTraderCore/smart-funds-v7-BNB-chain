@@ -1,31 +1,28 @@
+// This contract need only for tests!!!
+// This contract Mock 1 inch aggregator with Bancor network
+
 pragma solidity ^0.6.12;
 
-/*
-* This contract do swap for ERC20 via 1inch
 
-  Also this contract allow get ratio between crypto curency assets
-  Also get ratio for Bancor and Uniswap pools
-*/
+import "../contracts/zeppelin-solidity/contracts/access/Ownable.sol";
+import "../contracts/zeppelin-solidity/contracts/math/SafeMath.sol";
 
-import "../../zeppelin-solidity/contracts/access/Ownable.sol";
-import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
+import "../contracts/bancor/interfaces/IGetBancorData.sol";
+import "../contracts/bancor/interfaces/BancorNetworkInterface.sol";
 
-import "../../bancor/interfaces/IGetBancorData.sol";
-import "../../bancor/interfaces/BancorNetworkInterface.sol";
+import "../contracts/oneInch/IOneSplitAudit.sol";
 
-import "../../oneInch/IOneSplitAudit.sol";
-
-import "../interfaces/ExchangePortalInterface.sol";
-import "../interfaces/DefiPortalInterface.sol";
-import "../interfaces/PoolPortalViewInterface.sol";
-import "../interfaces/ITokensTypeStorage.sol";
-import "../interfaces/IMerkleTreeTokensVerification.sol";
+import "../contracts/core/interfaces/ExchangePortalInterface.sol";
+import "../contracts/core/interfaces/DefiPortalInterface.sol";
+import "../contracts/core/interfaces/PoolPortalViewInterface.sol";
+import "../contracts/core/interfaces/ITokensTypeStorage.sol";
+import "../contracts/core/interfaces/IMerkleTreeTokensVerification.sol";
 
 
 contract ExchangePortal is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
 
-  uint public version = 5;
+  uint public version = 4;
 
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
@@ -36,8 +33,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // 1INCH
   IOneSplitAudit public oneInch;
 
-  // 1 inch protocol for calldata
-  address public oneInchETH;
+  // BANCOR
+  IGetBancorData public bancorData;
 
   // CoTrader portals
   PoolPortalViewInterface public poolPortal;
@@ -50,7 +47,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
   // because order has dependency in other contracts like ConvertPortal
-  enum ExchangeType { OneInch, OneInchETH }
+  enum ExchangeType { Paraswap, Bancor, OneInch }
 
   // This contract recognizes ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -78,26 +75,26 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @dev contructor
   *
   * @param _defiPortal             address of defiPortal contract
+  * @param _bancorData             address of GetBancorData helper
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
-  * @param _oneInchETH             address of oneInch ETH contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
     address _defiPortal,
+    address _bancorData,
     address _poolPortal,
     address _oneInch,
-    address _oneInchETH,
     address _tokensTypes,
     address _merkleTreeWhiteList
     )
     public
   {
     defiPortal = DefiPortalInterface(_defiPortal);
+    bancorData = IGetBancorData(_bancorData);
     poolPortal = PoolPortalViewInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
-    oneInchETH = _oneInchETH;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -152,23 +149,23 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     if (_type == uint(ExchangeType.Paraswap)) {
       revert("PARASWAP not supported");
     }
-    // SHOULD TRADE 1INCH HERE
-    if (_type == uint(ExchangeType.OneInch)){
-      receivedAmount = _tradeViaOneInch(
+    // SHOULD TRADE BANCOR HERE
+    else if (_type == uint(ExchangeType.Bancor)){
+      receivedAmount = _tradeViaBancorNewtork(
           address(_source),
           address(_destination),
-          _sourceAmount,
-          _additionalData
+          _sourceAmount
       );
     }
-
-    // SHOULD TRADE 1INCH ETH HERE
-    else if (_type == uint(ExchangeType.OneInchETH)){
-      receivedAmount = _tradeViaOneInchETH(
+    // SHOULD TRADE 1INCH HERE
+    else if (_type == uint(ExchangeType.OneInch)){
+      // throw if addition 1inch data not correct
+      _verifyOneInchData(_additionalData);
+      // mock with Bancor
+      receivedAmount = _tradeViaBancorNewtork(
           address(_source),
           address(_destination),
-          _sourceAmount,
-          _additionalData
+          _sourceAmount
       );
     }
 
@@ -235,76 +232,55 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       revert("Dest not in white list");
   }
 
- // Facilitates trade with 1inch
- function _tradeViaOneInch(
+
+ // Facilitates trade with Bancor
+ function _tradeViaBancorNewtork(
    address sourceToken,
    address destinationToken,
-   uint256 sourceAmount,
-   bytes memory _additionalData
+   uint256 sourceAmount
    )
    private
-   returns(uint256 destinationReceived)
+   returns(uint256 returnAmount)
  {
-    (uint256 flags,
-     uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
+    // get latest bancor contracts
+    BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
+      bancorData.getBancorContractAddresByName("BancorNetwork")
+    );
 
-    if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
-      oneInch.swap.value(sourceAmount)(
-        IERC20(sourceToken),
-        IERC20(destinationToken),
-        sourceAmount,
-        1,
-        _distribution,
-        flags
-        );
-    } else {
-      _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(oneInch));
-      oneInch.swap(
-        IERC20(sourceToken),
-        IERC20(destinationToken),
-        sourceAmount,
-        1,
-        _distribution,
-        flags
-        );
+    // Get Bancor tokens path
+    address[] memory path = bancorData.getBancorPathForAssets(IERC20(sourceToken), IERC20(destinationToken));
+
+    // Convert addresses to ERC20
+    IERC20[] memory pathInERC20 = new IERC20[](path.length);
+    for(uint i=0; i<path.length; i++){
+        pathInERC20[i] = IERC20(path[i]);
     }
 
-    destinationReceived = tokenBalance(IERC20(destinationToken));
-    tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
+    // trade
+    if (IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
+      returnAmount = bancorNetwork.convert.value(sourceAmount)(pathInERC20, sourceAmount, 1);
+    }
+    else {
+      _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(bancorNetwork));
+      returnAmount = bancorNetwork.claimAndConvert(pathInERC20, sourceAmount, 1);
+    }
+
+    tokensTypes.addNewTokenType(destinationToken, "BANCOR_ASSET");
  }
 
-  // Facilitates trade with 1inch ETH
-  // this protocol require calldata from 1inch api
-  function _tradeViaOneInchETH(
-    address sourceToken,
-    address destinationToken,
-    uint256 sourceAmount,
+  // for test correct decode
+  function _verifyOneInchData(
     bytes memory _additionalData
     )
     private
-    returns(uint256 destinationReceived)
   {
-     bool success;
-     // from ETH
-     if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
-       (success, ) = oneInchETH.call.value(sourceAmount)(
-         _additionalData
-       );
-     }
-     // from ERC20
-     else {
-       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(oneInchETH));
-       (success, ) = oneInchETH.call(
-         _additionalData
-       );
-     }
-     // check trade status
-     require(success, "Fail 1inch call");
-     // get received amount
-     destinationReceived = tokenBalance(IERC20(destinationToken));
-     // set token type
-     tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
+     (uint256 flags,
+      uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
+
+      // check params
+      require(flags > 0, "Not correct flags param for 1inch aggregator");
   }
+
 
   /**
   * @dev Transfers tokens to this contract and approves them to another address
@@ -354,6 +330,18 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       if(assetType == bytes32("CRYPTOCURRENCY")){
         return getValueViaDEXsAgregators(_from, _to, _amount);
       }
+      else if (assetType == bytes32("BANCOR_ASSET")){
+        return getValueViaBancor(_from, _to, _amount);
+      }
+      else if (assetType == bytes32("UNISWAP_POOL")){
+        return getValueForUniswapPools(_from, _to, _amount);
+      }
+      else if (assetType == bytes32("UNISWAP_POOL_V2")){
+        return getValueForUniswapV2Pools(_from, _to, _amount);
+      }
+      else if (assetType == bytes32("BALANCER_POOL")){
+        return getValueForBalancerPool(_from, _to, _amount);
+      }
       else{
         // Unmarked type, try find value
         return findValue(_from, _to, _amount);
@@ -381,6 +369,26 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        if(defiValue > 0)
           return defiValue;
 
+       // If 1inch return 0, check from Bancor network for ensure this is not a Bancor pool
+       uint256 oneInchResult = getValueViaDEXsAgregators(_from, _to, _amount);
+       if(oneInchResult > 0)
+         return oneInchResult;
+
+       // If Bancor return 0, check from Balancer network for ensure this is not Balancer asset
+       uint256 bancorResult = getValueViaBancor(_from, _to, _amount);
+       if(bancorResult > 0)
+          return bancorResult;
+
+       // If Balancer return 0, check from Uniswap pools for ensure this is not Uniswap pool
+       uint256 balancerResult = getValueForBalancerPool(_from, _to, _amount);
+       if(balancerResult > 0)
+          return balancerResult;
+
+       // If Uniswap return 0, check from Uniswap version 2 pools for ensure this is not Uniswap V2 pool
+       uint256 uniswapResult = getValueForUniswapPools(_from, _to, _amount);
+       if(uniswapResult > 0)
+          return uniswapResult;
+
        // Uniswap V2 pools return 0 if these is not a Uniswap V2 pool
        return getValueForUniswapV2Pools(_from, _to, _amount);
      }
@@ -404,8 +412,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
     // try get value via 1inch
     if(_amount > 0){
-      // try get value from 1inch aggregator
-      return getValueViaOneInch(_from, _to, _amount);
+      // Mock 1 inch with Bancor
+      return getValueViaBancor(_from, _to, _amount);
     }
     else{
       return 0;
@@ -413,8 +421,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
 
-  // helper for get ratio between assets in 1inch aggregator
-  function getValueViaOneInch(
+
+  // helper for get ratio between assets in Bancor network
+  function getValueViaBancor(
     address _from,
     address _to,
     uint256 _amount
@@ -428,19 +437,79 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        return _amount;
 
     // try get rate
-    try oneInch.getExpectedReturn(
-       IERC20(_from),
-       IERC20(_to),
-       _amount,
-       10,
-       oneInchFlags)
-      returns(uint256 returnAmount, uint256[] memory distribution)
-     {
-       value = returnAmount;
+    if(_amount > 0){
+      try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
+        value = result;
+      }catch{
+        value = 0;
+      }
+    }else{
+      return 0;
+    }
+  }
+
+
+  // helper for get value via Balancer
+  function getValueForBalancerPool(
+    address _from,
+    address _to,
+    uint256 _amount
+  )
+    public
+    view
+    returns (uint256 value)
+  {
+    // get value for each pool share
+    try poolPortal.getBalancerConnectorsAmountByPoolAmount(_amount, _from)
+    returns(
+      address[] memory tokens,
+      uint256[] memory tokensAmount
+    )
+    {
+     // convert and sum value via DEX aggregator
+     for(uint i = 0; i < tokens.length; i++){
+       value += getValueViaDEXsAgregators(tokens[i], _to, tokensAmount[i]);
      }
-     catch{
-       value = 0;
-     }
+    }
+    catch{
+      value = 0;
+    }
+  }
+
+  // helper for get ratio between pools in Uniswap network
+  // _from - should be uniswap pool address
+  function getValueForUniswapPools(
+    address _from,
+    address _to,
+    uint256 _amount
+  )
+  public
+  view
+  returns (uint256)
+  {
+    // get connectors amount
+    try poolPortal.getUniswapConnectorsAmountByPoolAmount(
+      _amount,
+      _from
+    ) returns (uint256 ethAmount, uint256 ercAmount)
+    {
+      // get ERC amount in ETH
+      address token = poolPortal.getTokenByUniswapExchange(_from);
+      uint256 ercAmountInETH = getValueViaDEXsAgregators(token, address(ETH_TOKEN_ADDRESS), ercAmount);
+      // sum ETH with ERC amount in ETH
+      uint256 totalETH = ethAmount.add(ercAmountInETH);
+
+      // if _to == ETH no need additional convert, just return ETH amount
+      if(_to == address(ETH_TOKEN_ADDRESS)){
+        return totalETH;
+      }
+      // convert ETH into _to asset via 1inch
+      else{
+        return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
+      }
+    }catch{
+      return 0;
+    }
   }
 
 
@@ -516,11 +585,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // owner can change oneInch
   function setNewOneInch(address _oneInch) external onlyOwner {
     oneInch = IOneSplitAudit(_oneInch);
-  }
-
-  // owner can change oneInch
-  function setNewOneInchETH(address _oneInchETH) external onlyOwner {
-    oneInchETH = _oneInchETH;
   }
 
   // owner can set new pool portal
