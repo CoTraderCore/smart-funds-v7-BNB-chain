@@ -10,9 +10,6 @@ pragma solidity ^0.6.12;
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
-import "../../bancor/interfaces/IGetBancorData.sol";
-import "../../bancor/interfaces/BancorNetworkInterface.sol";
-
 import "../../oneInch/IOneSplitAudit.sol";
 
 import "../interfaces/ExchangePortalInterface.sol";
@@ -147,11 +144,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     } else {
       require(msg.value == 0);
     }
-
-    // SHOULD TRADE PARASWAP HERE
-    if (_type == uint(ExchangeType.Paraswap)) {
-      revert("PARASWAP not supported");
-    }
+    
     // SHOULD TRADE 1INCH HERE
     if (_type == uint(ExchangeType.OneInch)){
       receivedAmount = _tradeViaOneInch(
@@ -536,11 +529,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // owner of portal can update 1 incg DEXs sources
   function setOneInchFlags(uint256 _oneInchFlags) external onlyOwner {
     oneInchFlags = _oneInchFlags;
-  }
-
-  // owner of portal can change getBancorData helper, for case if Bancor do some major updates
-  function setNewGetBancorData(address _bancorData) external onlyOwner {
-    bancorData = IGetBancorData(_bancorData);
   }
 
   // fallback payable function to receive ether from other contract addresses
