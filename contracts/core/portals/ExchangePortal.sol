@@ -10,7 +10,7 @@ pragma solidity ^0.6.12;
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
-import "../../oneInch/IOneSplitAudit.sol";
+import "../../oneInch/IOneInchPrice.sol";
 
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/DefiPortalInterface.sol";
@@ -30,24 +30,20 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // Contract for merkle tree white list verification
   IMerkleTreeTokensVerification public merkleTreeWhiteList;
 
-  // 1INCH
-  IOneSplitAudit public oneInch;
-
   // 1 inch protocol for calldata
   address public oneInchETH;
+
+  IOneInchPrice public oneInchPrice;
 
   // CoTrader portals
   PoolPortalViewInterface public poolPortal;
   DefiPortalInterface public defiPortal;
 
-  // 1 inch flags
-  // By default support Bancor + Uniswap + Uniswap v2
-  uint256 oneInchFlags = 570425349;
 
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
   // because order has dependency in other contracts like ConvertPortal
-  enum ExchangeType { OneInch, OneInchETH }
+  enum ExchangeType { OneInchETH }
 
   // This contract recognizes ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -76,7 +72,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   *
   * @param _defiPortal             address of defiPortal contract
   * @param _poolPortal             address of pool portal
-  * @param _oneInch                address of 1inch OneSplitAudit contract
+  * @param _oneInchPrice           address of 1inch price
   * @param _oneInchETH             address of oneInch ETH contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
@@ -84,7 +80,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   constructor(
     address _defiPortal,
     address _poolPortal,
-    address _oneInch,
+    address _oneInchPrice,
     address _oneInchETH,
     address _tokensTypes,
     address _merkleTreeWhiteList
@@ -93,7 +89,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   {
     defiPortal = DefiPortalInterface(_defiPortal);
     poolPortal = PoolPortalViewInterface(_poolPortal);
-    oneInch = IOneSplitAudit(_oneInch);
+    oneInchPrice = IOneInchPrice(_oneInchPrice);
     oneInchETH = _oneInchETH;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
@@ -144,19 +140,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     } else {
       require(msg.value == 0);
     }
-    
-    // SHOULD TRADE 1INCH HERE
-    if (_type == uint(ExchangeType.OneInch)){
-      receivedAmount = _tradeViaOneInch(
-          address(_source),
-          address(_destination),
-          _sourceAmount,
-          _additionalData
-      );
-    }
 
-    // SHOULD TRADE 1INCH ETH HERE
-    else if (_type == uint(ExchangeType.OneInchETH)){
+    if (_type == uint(ExchangeType.OneInchETH)){
       receivedAmount = _tradeViaOneInchETH(
           address(_source),
           address(_destination),
@@ -167,7 +152,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
     else {
       // unknown exchange type
-      revert();
+      revert("Unknown type");
     }
 
     // Additional check
@@ -227,44 +212,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     if(!status)
       revert("Dest not in white list");
   }
-
- // Facilitates trade with 1inch
- function _tradeViaOneInch(
-   address sourceToken,
-   address destinationToken,
-   uint256 sourceAmount,
-   bytes memory _additionalData
-   )
-   private
-   returns(uint256 destinationReceived)
- {
-    (uint256 flags,
-     uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
-
-    if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
-      oneInch.swap.value(sourceAmount)(
-        IERC20(sourceToken),
-        IERC20(destinationToken),
-        sourceAmount,
-        1,
-        _distribution,
-        flags
-        );
-    } else {
-      _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(oneInch));
-      oneInch.swap(
-        IERC20(sourceToken),
-        IERC20(destinationToken),
-        sourceAmount,
-        1,
-        _distribution,
-        flags
-        );
-    }
-
-    destinationReceived = tokenBalance(IERC20(destinationToken));
-    tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
- }
 
   // Facilitates trade with 1inch ETH
   // this protocol require calldata from 1inch api
@@ -421,15 +368,13 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        return _amount;
 
     // try get rate
-    try oneInch.getExpectedReturn(
+    try oneInchPrice.getRate(
        IERC20(_from),
-       IERC20(_to),
-       _amount,
-       10,
-       oneInchFlags)
-      returns(uint256 returnAmount, uint256[] memory distribution)
+       IERC20(_to)
+     )
+      returns(uint256 weightedRate)
      {
-       value = returnAmount;
+       value = _amount.mul(weightedRate);
      }
      catch{
        value = 0;
@@ -507,8 +452,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
   // owner can change oneInch
-  function setNewOneInch(address _oneInch) external onlyOwner {
-    oneInch = IOneSplitAudit(_oneInch);
+  function setNewOneInchPrice(address _oneInchPrice) external onlyOwner {
+    oneInchPrice = IOneInchPrice(_oneInchPrice);
   }
 
   // owner can change oneInch
@@ -524,11 +469,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // owner can set new defi portal
   function setNewDefiPortal(address _defiPortal) external onlyOwner {
     defiPortal = DefiPortalInterface(_defiPortal);
-  }
-
-  // owner of portal can update 1 incg DEXs sources
-  function setOneInchFlags(uint256 _oneInchFlags) external onlyOwner {
-    oneInchFlags = _oneInchFlags;
   }
 
   // fallback payable function to receive ether from other contract addresses

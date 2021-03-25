@@ -258,23 +258,6 @@ contract PoolPortal is Ownable{
     }
   }
 
-  /**
-  * @dev return token ration in ETH in Uniswap network
-  *
-  * @param _token     address of ERC20 token
-  * @param _amount    ETH amount
-  */
-  function getUniswapTokenAmountByETH(address _token, uint256 _amount)
-    public
-    view
-    returns(uint256)
-  {
-    UniswapExchangeInterface exchange = UniswapExchangeInterface(
-      uniswapFactoryV1.getExchange(_token));
-
-    return exchange.getTokenToEthOutputPrice(_amount);
-  }
-
 
   /**
   * @dev sell Bancor or Uniswap pool

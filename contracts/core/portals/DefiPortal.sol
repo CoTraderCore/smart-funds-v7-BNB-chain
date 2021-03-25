@@ -1,5 +1,5 @@
 // For support new Defi protocols
-// NOT IMPLEMENTED FOR NOW 
+// NOT IMPLEMENTED FOR NOW
 pragma solidity ^0.6.12;
 
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -39,10 +39,22 @@ contract DefiPortal {
   */
 
 
-  // param _additionalArgs[0] require DefiActions type
-  function callNonPayableProtocol(
-     revert("Unknown DEFI action");
-  }
+  // // param _additionalArgs[0] require DefiActions type
+  // function callNonPayableProtocol(
+  //   address[] memory tokensToSend,
+  //   uint256[] memory amountsToSend,
+  //   bytes memory _additionalData,
+  //   bytes32[] memory _additionalArgs
+  // )
+  //   external
+  //   returns(
+  //     string memory eventType,
+  //     address[] memory tokensToReceive,
+  //     uint256[] memory amountsToReceive
+  //   )
+  // {
+  //    revert("Unknown DEFI action");
+  // }
 
 
   /**
