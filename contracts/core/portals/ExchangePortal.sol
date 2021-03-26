@@ -286,22 +286,23 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256)
   {
-    if(_amount > 0){
-      // get asset type
-      bytes32 assetType = tokensTypes.getType(_from);
-
-      // get value by asset type
-      if(assetType == bytes32("CRYPTOCURRENCY")){
-        return getValueViaDEXsAgregators(_from, _to, _amount);
-      }
-      else{
-        // Unmarked type, try find value
-        return findValue(_from, _to, _amount);
-      }
-    }
-    else{
-      return 0;
-    }
+    return getValueViaDEXsAgregators(_from, _to, _amount);
+    // if(_amount > 0){
+    //   // get asset type
+    //   bytes32 assetType = tokensTypes.getType(_from);
+    //
+    //   // get value by asset type
+    //   if(assetType == bytes32("CRYPTOCURRENCY")){
+    //     return getValueViaDEXsAgregators(_from, _to, _amount);
+    //   }
+    //   else{
+    //     // Unmarked type, try find value
+    //     return findValue(_from, _to, _amount);
+    //   }
+    // }
+    // else{
+    //   return 0;
+    // }
   }
 
   /**

@@ -410,21 +410,6 @@ contract PoolPortal is Ownable{
   }
 
 
-
-  /**
-  * @dev return ERC20 address from Uniswap exchange address
-  *
-  * @param _exchange       address of uniswap exchane
-  */
-  function getTokenByUniswapExchange(address _exchange)
-    external
-    view
-    returns(address)
-  {
-    return uniswapFactoryV1.getToken(_exchange);
-  }
-
-
   /**
   * @dev helper for get amounts for both Uniswap connectors for input amount of pool
   * for Uniswap version 2
