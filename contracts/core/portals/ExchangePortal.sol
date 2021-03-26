@@ -180,39 +180,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     );
   }
 
-  // Facilitates for send source remains
-  function _sendRemains(IERC20 _source, address _receiver) private {
-    // After the trade, any _source that exchangePortal holds will be sent back to msg.sender
-    uint256 endAmount = (_source == ETH_TOKEN_ADDRESS)
-    ? address(this).balance
-    : _source.balanceOf(address(this));
-
-    // Check if we hold a positive amount of _source
-    if (endAmount > 0) {
-      if (_source == ETH_TOKEN_ADDRESS) {
-        payable(_receiver).transfer(endAmount);
-      } else {
-        _source.transfer(_receiver, endAmount);
-      }
-    }
-  }
-
-
-  // Facilitates for verify destanation token input (check if token in merkle list or not)
-  // revert transaction if token not in list
-  function _verifyToken(
-    address _destination,
-    bytes32 [] memory proof,
-    uint256 [] memory positions)
-    private
-    view
-  {
-    bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
-
-    if(!status)
-      revert("Dest not in white list");
-  }
-
   // Facilitates trade with 1inch ETH
   // this protocol require calldata from 1inch api
   function _tradeViaOneInchETH(
@@ -244,6 +211,39 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      destinationReceived = tokenBalance(IERC20(destinationToken));
      // set token type
      tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
+  }
+
+  // Facilitates for send source remains
+  function _sendRemains(IERC20 _source, address _receiver) private {
+    // After the trade, any _source that exchangePortal holds will be sent back to msg.sender
+    uint256 endAmount = (_source == ETH_TOKEN_ADDRESS)
+    ? address(this).balance
+    : _source.balanceOf(address(this));
+
+    // Check if we hold a positive amount of _source
+    if (endAmount > 0) {
+      if (_source == ETH_TOKEN_ADDRESS) {
+        payable(_receiver).transfer(endAmount);
+      } else {
+        _source.transfer(_receiver, endAmount);
+      }
+    }
+  }
+
+
+  // Facilitates for verify destanation token input (check if token in merkle list or not)
+  // revert transaction if token not in list
+  function _verifyToken(
+    address _destination,
+    bytes32 [] memory proof,
+    uint256 [] memory positions)
+    private
+    view
+  {
+    bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
+
+    if(!status)
+      revert("Dest not in white list");
   }
 
   /**
