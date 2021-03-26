@@ -83,14 +83,25 @@ contract PoolPortal is Ownable{
 
     // Buy Uniswap pool
     if (_type == uint(PortalType.Pancake)){
-      (poolAmountReceive) = buyUniswapPool(
-        _amount,
+      // define spender dependse of UNI pool version
+      address spender = address(uniswapV2Router);
+
+      // approve pool tokens to Uni pool exchange
+      _approvePoolConnectors(
+        _connectorsAddress,
+        _connectorsAmount,
+        spender);
+
+      _buyUniswapPoolV2(
         _poolToken,
         _connectorsAddress,
         _connectorsAmount,
-        _additionalArgs,
         _additionalData
-      );
+        );
+      // get pool amount
+      poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
+      // check if we recieved pool token
+      require(poolAmountReceive > 0, "ERR UNI pool received 0");
     }
     else{
       // unknown portal type
@@ -108,42 +119,6 @@ contract PoolPortal is Ownable{
 
     // trigger event
     emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
-  }
-
-
-  /**
-  * @dev helper for buying Uniswap v1 or v2 pool
-  */
-  function buyUniswapPool(
-    uint256 _amount,
-    address _poolToken,
-    address[] calldata _connectorsAddress,
-    uint256[] calldata _connectorsAmount,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionalData
-  )
-   private
-   returns(uint256 poolAmountReceive)
-  {
-    // define spender dependse of UNI pool version
-    address spender = address(uniswapV2Router);
-
-    // approve pool tokens to Uni pool exchange
-    _approvePoolConnectors(
-      _connectorsAddress,
-      _connectorsAmount,
-      spender);
-
-    _buyUniswapPoolV2(
-      _poolToken,
-      _connectorsAddress,
-      _connectorsAmount,
-      _additionalData
-      );
-    // get pool amount
-    poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
-    // check if we recieved pool token
-    require(poolAmountReceive > 0, "ERR UNI pool received 0");
   }
 
 
@@ -284,11 +259,14 @@ contract PoolPortal is Ownable{
   {
     // sell Bancor Pool
     if (_type == uint(PortalType.Pancake)){
-      (connectorsAddress, connectorsAmount) = sellUniswapPool(
-        _poolToken,
-        _amount,
-        _additionalArgs,
-        _additionalData);
+      // define spender dependse of UNI pool version
+      address spender = address(uniswapV2Router);
+      // approve pool token
+      _transferFromSenderAndApproveTo(_poolToken, _amount, spender);
+      // sell Uni v1 or v2 pool
+      (connectorsAddress) = sellPoolViaUniswapV2(_amount, _additionalData);
+      // transfer pool connectors back to fund
+      connectorsAmount = transferConnectorsToSender(connectorsAddress);
     }
     else{
       revert("Unknown portal type");
@@ -297,34 +275,6 @@ contract PoolPortal is Ownable{
     emit SellPool(address(_poolToken), _amount, msg.sender);
   }
 
-
-  /**
-  * @dev helper for sell pool in Uniswap network for v1 and v2
-  */
-  function sellUniswapPool(
-    IERC20 _poolToken,
-    uint256 _amount,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionalData
-  )
-   private
-   returns(
-     address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount
-  )
-  {
-    // define spender dependse of UNI pool version
-    address spender = address(uniswapV2Router);
-
-    // approve pool token
-    _transferFromSenderAndApproveTo(_poolToken, _amount, spender);
-
-    // sell Uni v1 or v2 pool
-    (connectorsAddress) = sellPoolViaUniswapV2(_amount, _additionalData);
-
-    // transfer pool connectors back to fund
-    connectorsAmount = transferConnectorsToSender(connectorsAddress);
-  }
 
   /**
   * @dev helper for sell pool in Uniswap network v2

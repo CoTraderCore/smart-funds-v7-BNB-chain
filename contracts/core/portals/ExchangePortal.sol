@@ -286,23 +286,22 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256)
   {
-    return getValueViaDEXsAgregators(_from, _to, _amount);
-    // if(_amount > 0){
-    //   // get asset type
-    //   bytes32 assetType = tokensTypes.getType(_from);
-    //
-    //   // get value by asset type
-    //   if(assetType == bytes32("CRYPTOCURRENCY")){
-    //     return getValueViaDEXsAgregators(_from, _to, _amount);
-    //   }
-    //   else{
-    //     // Unmarked type, try find value
-    //     return findValue(_from, _to, _amount);
-    //   }
-    // }
-    // else{
-    //   return 0;
-    // }
+    if(_amount > 0){
+      // get asset type
+      bytes32 assetType = tokensTypes.getType(_from);
+
+      // get value by asset type
+      if(assetType == bytes32("CRYPTOCURRENCY")){
+        return getValueViaDEXsAgregators(_from, _to, _amount);
+      }
+      else{
+        // Unmarked type, try find value
+        return findValue(_from, _to, _amount);
+      }
+    }
+    else{
+      return 0;
+    }
   }
 
   /**
@@ -316,6 +315,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
+       // re-check from aggregators for unknown type 
+       uint256 aggregatorValue = getValueViaDEXsAgregators(_from, _to, _amount)
+       if(aggregatorValue > 0)
+          return aggregatorValue;
        // Check at first value from defi portal, maybe there are new defi protocols
        // If defiValue return 0 continue check from another sources
        uint256 defiValue = defiPortal.getValue(_from, _to, _amount);
