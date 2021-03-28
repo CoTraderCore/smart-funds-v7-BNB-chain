@@ -200,7 +200,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      }
      // from ERC20
      else {
-       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(OneInchRoute));
+       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, OneInchRoute);
        (success, ) = OneInchRoute.call(
          _additionalData
        );
@@ -316,7 +316,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
        // re-check from aggregators for unknown type
-       uint256 aggregatorValue = getValueViaDEXsAgregators(_from, _to, _amount)
+       uint256 aggregatorValue = getValueViaDEXsAgregators(_from, _to, _amount);
        if(aggregatorValue > 0)
           return aggregatorValue;
        // Check at first value from defi portal, maybe there are new defi protocols
