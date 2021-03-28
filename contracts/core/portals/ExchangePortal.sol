@@ -31,7 +31,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   IMerkleTreeTokensVerification public merkleTreeWhiteList;
 
   // 1 inch protocol for calldata
-  address public oneInchETH;
+  address public OneInchRoute;
 
   IOneInchPrice public oneInchPrice;
 
@@ -43,7 +43,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
   // because order has dependency in other contracts like ConvertPortal
-  enum ExchangeType { OneInchETH }
+  enum ExchangeType { OneInchRoute }
 
   // This contract recognizes ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -73,7 +73,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _defiPortal             address of defiPortal contract
   * @param _poolPortal             address of pool portal
   * @param _oneInchPrice           address of 1inch price
-  * @param _oneInchETH             address of oneInch ETH contract
+  * @param _OneInchRoute             address of oneInch ETH contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
@@ -81,7 +81,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _defiPortal,
     address _poolPortal,
     address _oneInchPrice,
-    address _oneInchETH,
+    address _OneInchRoute,
     address _tokensTypes,
     address _merkleTreeWhiteList
     )
@@ -90,7 +90,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     defiPortal = DefiPortalInterface(_defiPortal);
     poolPortal = PoolPortalViewInterface(_poolPortal);
     oneInchPrice = IOneInchPrice(_oneInchPrice);
-    oneInchETH = _oneInchETH;
+    OneInchRoute = _OneInchRoute;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -141,8 +141,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       require(msg.value == 0);
     }
 
-    if (_type == uint(ExchangeType.OneInchETH)){
-      receivedAmount = _tradeViaOneInchETH(
+    if (_type == uint(ExchangeType.OneInchRoute)){
+      receivedAmount = _tradeViaOneInchRoute(
           address(_source),
           address(_destination),
           _sourceAmount,
@@ -182,7 +182,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // Facilitates trade with 1inch ETH
   // this protocol require calldata from 1inch api
-  function _tradeViaOneInchETH(
+  function _tradeViaOneInchRoute(
     address sourceToken,
     address destinationToken,
     uint256 sourceAmount,
@@ -194,14 +194,14 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      bool success;
      // from ETH
      if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
-       (success, ) = oneInchETH.call.value(sourceAmount)(
+       (success, ) = OneInchRoute.call.value(sourceAmount)(
          _additionalData
        );
      }
      // from ERC20
      else {
-       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(oneInchETH));
-       (success, ) = oneInchETH.call(
+       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(OneInchRoute));
+       (success, ) = OneInchRoute.call(
          _additionalData
        );
      }
@@ -315,7 +315,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
-       // re-check from aggregators for unknown type 
+       // re-check from aggregators for unknown type
        uint256 aggregatorValue = getValueViaDEXsAgregators(_from, _to, _amount)
        if(aggregatorValue > 0)
           return aggregatorValue;
@@ -461,8 +461,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
   // owner can change oneInch
-  function setNewOneInchETH(address _oneInchETH) external onlyOwner {
-    oneInchETH = _oneInchETH;
+  function setNewOneInchRoute(address _OneInchRoute) external onlyOwner {
+    OneInchRoute = _OneInchRoute;
   }
 
   // owner can set new pool portal
