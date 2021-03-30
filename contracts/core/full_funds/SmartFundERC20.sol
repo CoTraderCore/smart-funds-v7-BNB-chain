@@ -18,6 +18,7 @@ contract SmartFundERC20 is SmartFundCore {
   /**
   * @dev constructor
   *
+  * @param _platfromAddress              Address of CoTrader platform
   * @param _owner                        Address of the fund manager
   * @param _name                         Name of the fund, required for DetailedERC20 compliance
   * @param _successFee                   Percentage of profit that the fund manager receives
@@ -28,6 +29,7 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
   constructor(
+    address _platfromAddress,
     address _owner,
     string memory _name,
     uint256 _successFee,
@@ -40,6 +42,7 @@ contract SmartFundERC20 is SmartFundCore {
     bool    _isRequireTradeVerification
   )
   SmartFundCore(
+    _platfromAddress,
     _owner,
     _name,
     _successFee,

@@ -3,13 +3,9 @@ pragma solidity ^0.6.12;
 import "./SmartFundETH.sol";
 
 contract SmartFundETHFactory {
-  address public platfromAddress;
-
-  constructor(address _platfromAddress) public {
-    platfromAddress = _platfromAddress;
-  }
 
   function createSmartFund(
+    address platfromAddress,
     address _owner,
     string  memory _name,
     uint256 _successFee,
@@ -23,10 +19,10 @@ contract SmartFundETHFactory {
   returns(address)
   {
     SmartFundETH smartFundETH = new SmartFundETH(
+      platfromAddress,
       _owner,
       _name,
       _successFee,
-      platfromAddress,
       _exchangePortalAddress,
       _poolPortalAddress,
       _defiPortal,
