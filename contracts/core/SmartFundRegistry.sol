@@ -31,9 +31,6 @@ contract SmartFundRegistry is Ownable {
   // Address of stable coin can be set in constructor and changed via function
   address public stableCoinAddress;
 
-  // Address of CoTrader coin be set in constructor
-  address public COTCoinAddress;
-
   // Factories
   SmartFundETHFactoryInterface public smartFundETHFactory;
   SmartFundERC20FactoryInterface public smartFundERC20Factory;
@@ -42,7 +39,7 @@ contract SmartFundRegistry is Ownable {
 
   // Enum for detect fund type in create fund function
   // NOTE: You can add a new type at the end, but do not change this order
-  enum FundType { ETH, USD, COT }
+  enum FundType { ETH, USD }
 
   event SmartFundAdded(address indexed smartFundAddress, address indexed owner);
 
@@ -52,7 +49,6 @@ contract SmartFundRegistry is Ownable {
   * @param _exchangePortalAddress        Address of the initial ExchangePortal contract
   * @param _poolPortalAddress            Address of the initial PoolPortal contract
   * @param _stableCoinAddress            Address of the stable coin
-  * @param _COTCoinAddress               Address of Cotrader coin
   * @param _smartFundETHFactory          Address of smartFund ETH factory
   * @param _smartFundERC20Factory        Address of smartFund USD factory
   * @param _smartFundETHLightFactory     Address of smartFund ETH factory
@@ -64,7 +60,6 @@ contract SmartFundRegistry is Ownable {
     address _exchangePortalAddress,
     address _poolPortalAddress,
     address _stableCoinAddress,
-    address _COTCoinAddress,
     address _smartFundETHFactory,
     address _smartFundERC20Factory,
     address _smartFundETHLightFactory,
@@ -75,7 +70,6 @@ contract SmartFundRegistry is Ownable {
     exchangePortalAddress = _exchangePortalAddress;
     poolPortalAddress = _poolPortalAddress;
     stableCoinAddress = _stableCoinAddress;
-    COTCoinAddress = _COTCoinAddress;
     smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
     smartFundERC20Factory = SmartFundERC20FactoryInterface(_smartFundERC20Factory);
     smartFundETHLightFactory = SmartFundETHLightFactoryInterface(_smartFundETHLightFactory);
@@ -119,9 +113,8 @@ contract SmartFundRegistry is Ownable {
       );
 
     }
-    // ERC20 case
+    // USD case
     else{
-      address coinAddress = getERC20AddressByFundType(_fundType);
       // Create ERC20 based fund
       smartFund = smartFundERC20Factory.createSmartFund(
         msg.sender,
@@ -131,7 +124,7 @@ contract SmartFundRegistry is Ownable {
         poolPortalAddress,
         defiPortalAddress,
         address(permittedAddresses),
-        coinAddress,
+        stableCoinAddress,
         _isRequireTradeVerification
       );
     }
@@ -175,7 +168,6 @@ contract SmartFundRegistry is Ownable {
     }
     // ERC20 case
     else{
-      address coinAddress = getERC20AddressByFundType(_fundType);
       // Create ERC20 based fund
       smartFund = smartFundERC20LightFactory.createSmartFundLight(
         msg.sender,
@@ -183,21 +175,13 @@ contract SmartFundRegistry is Ownable {
         _successFee, // manager and platform fee
         exchangePortalAddress,
         address(permittedAddresses),
-        coinAddress,
+        stableCoinAddress,
         _isRequireTradeVerification
       );
     }
 
     smartFunds.push(smartFund);
     emit SmartFundAdded(smartFund, msg.sender);
-  }
-
-
-  function getERC20AddressByFundType(uint256 _fundType) private view returns(address coinAddress){
-    // Define coin address dependse of fund type
-    coinAddress = _fundType == uint256(FundType.USD)
-    ? stableCoinAddress
-    : COTCoinAddress;
   }
 
   function totalSmartFunds() public view returns (uint256) {
