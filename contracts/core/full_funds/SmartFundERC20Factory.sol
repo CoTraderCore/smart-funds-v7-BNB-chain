@@ -4,10 +4,10 @@ import "./SmartFundERC20.sol";
 
 contract SmartFundERC20Factory {
   function createSmartFund(
-    address platfromAddress,
     address _owner,
     string memory _name,
     uint256 _successFee,
+    address _platfromAddress,
     address _exchangePortalAddress,
     address _poolPortalAddress,
     address _defiPortal,
@@ -19,11 +19,10 @@ contract SmartFundERC20Factory {
   returns(address)
   {
     SmartFundERC20 smartFundERC20 = new SmartFundERC20(
-      platfromAddress,
       _owner,
       _name,
       _successFee,
-       platfromAddress,
+      _platfromAddress,
       _exchangePortalAddress,
       _poolPortalAddress,
       _defiPortal,

@@ -5,10 +5,10 @@ import "./SmartFundETH.sol";
 contract SmartFundETHFactory {
 
   function createSmartFund(
-    address platfromAddress,
     address _owner,
     string  memory _name,
     uint256 _successFee,
+    address _platfromAddress,
     address _exchangePortalAddress,
     address _poolPortalAddress,
     address _defiPortal,
@@ -19,10 +19,10 @@ contract SmartFundETHFactory {
   returns(address)
   {
     SmartFundETH smartFundETH = new SmartFundETH(
-      platfromAddress,
       _owner,
       _name,
       _successFee,
+      _platfromAddress,
       _exchangePortalAddress,
       _poolPortalAddress,
       _defiPortal,

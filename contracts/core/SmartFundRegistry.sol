@@ -94,10 +94,10 @@ contract SmartFundRegistry is Ownable {
     if(_fundType == uint256(FundType.ETH)){
       // Create ETH Fund
       smartFund = smartFundETHFactory.createSmartFund(
-        platformFeeAddress,
         msg.sender,
         _name,
         _successFee, // manager and platform fee
+        platformFeeAddress,
         exchangePortalAddress,
         poolPortalAddress,
         defiPortalAddress,
@@ -110,10 +110,10 @@ contract SmartFundRegistry is Ownable {
     else{
       // Create ERC20 based fund
       smartFund = smartFundERC20Factory.createSmartFund(
-        platformFeeAddress,
         msg.sender,
         _name,
         _successFee, // manager and platform fee
+        platformFeeAddress,
         exchangePortalAddress,
         poolPortalAddress,
         defiPortalAddress,

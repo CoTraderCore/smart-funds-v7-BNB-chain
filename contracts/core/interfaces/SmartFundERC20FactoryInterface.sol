@@ -1,9 +1,9 @@
 interface SmartFundERC20FactoryInterface {
   function createSmartFund(
-    address platformAddress,
     address _owner,
     string memory _name,
     uint256 _successFee,
+    address platformAddress,
     address _exchangePortalAddress,
     address _poolPortalAddress,
     address _defiPortal,

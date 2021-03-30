@@ -140,7 +140,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
 
   constructor(
-    address platfromAddress,
     address _owner,
     string memory _name,
     uint256 _successFee,
