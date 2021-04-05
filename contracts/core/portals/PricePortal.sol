@@ -32,7 +32,10 @@ contract PricePortal {
      )
       returns(uint256 weightedRate)
      {
-       value = _amount.mul(weightedRate).div(10**getDecimals(_from));
+       uint256 decimalsFrom = getDecimals(_from);
+       uint256 decimalsTo = getDecimals(_to);
+       uint256 preConvert = uint256(weightedRate) * (10 ** decimalsFrom) / (10 ** decimalsTo);
+       value = _amount.mul(preConvert).div(10**decimalsFrom);
      }
      catch{
        value = 0;
@@ -40,7 +43,7 @@ contract PricePortal {
   }
 
   function getDecimals(address _from) internal view returns(uint256) {
-    if(_from == ETH_TOKEN_ADDRESS){
+    if(_from == ETH_TOKEN_ADDRESS || _from == address(0)){
       return 18;
     }else{
       return IDecimals(_from).decimals();
