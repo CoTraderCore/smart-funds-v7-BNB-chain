@@ -32,6 +32,7 @@ Don't forget set latest 1incg contract
 
 optimization true 200
 
+
 DAI BSC
 
 0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3
@@ -76,14 +77,24 @@ Defi Portal (NOT IMPLEMENTED)
 0x6d85Dd4672AFad01a28bdfA8b4323bE910999954
 
 
+Price Portal
+
+0xcCb6973225FE7e61B97E0fe1a7822EEc56884d92
+
+
 Pool Portal
 
 0x2b4ba0A92CcC11E839d1928ae73b34E7aaC2C040
 
 
-Exchange Portal
+Exchange Portal (OLD)
 
 0xC8A2Ba3E9CE03f78551d7dE5706Cc275d4D3130f
+
+
+Exchange Portal (NEW)
+
+0x5d1A6508433067191002c0655D9f2Dcf62768224
 
 
 Smart Fund ETH Factory
@@ -99,5 +110,6 @@ Smart Fund ERC20 Factory
 Smart funds registry
 
 0x3e3C06d526b38F67D7a897Bba20906f36D2793A3
+
 
 ```

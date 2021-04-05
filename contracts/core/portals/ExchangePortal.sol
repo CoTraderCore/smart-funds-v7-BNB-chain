@@ -10,8 +10,7 @@ pragma solidity ^0.6.12;
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
-import "../../oneInch/IOneInchPrice.sol";
-
+import "../interfaces/IPricePortal.sol";
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/DefiPortalInterface.sol";
 import "../interfaces/PoolPortalViewInterface.sol";
@@ -33,7 +32,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // 1 inch protocol for calldata
   address public OneInchRoute;
 
-  IOneInchPrice public oneInchPrice;
+  IPricePortal public pricePortal;
 
   // CoTrader portals
   PoolPortalViewInterface public poolPortal;
@@ -72,15 +71,15 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   *
   * @param _defiPortal             address of defiPortal contract
   * @param _poolPortal             address of pool portal
-  * @param _oneInchPrice           address of 1inch price
-  * @param _OneInchRoute             address of oneInch ETH contract
+  * @param _pricePortal            address of price portal
+  * @param _OneInchRoute           address of oneInch ETH contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
     address _defiPortal,
     address _poolPortal,
-    address _oneInchPrice,
+    address _pricePortal,
     address _OneInchRoute,
     address _tokensTypes,
     address _merkleTreeWhiteList
@@ -89,7 +88,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   {
     defiPortal = DefiPortalInterface(_defiPortal);
     poolPortal = PoolPortalViewInterface(_poolPortal);
-    oneInchPrice = IOneInchPrice(_oneInchPrice);
+    pricePortal = IPricePortal(_pricePortal);
     OneInchRoute = _OneInchRoute;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
@@ -349,40 +348,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     // try get value via 1inch
     if(_amount > 0){
       // try get value from 1inch aggregator
-      return getValueViaOneInch(_from, _to, _amount);
+      return pricePortal.getPrice(_from, _to, _amount);
     }
     else{
       return 0;
     }
-  }
-
-
-  // helper for get ratio between assets in 1inch aggregator
-  function getValueViaOneInch(
-    address _from,
-    address _to,
-    uint256 _amount
-  )
-    public
-    view
-    returns (uint256 value)
-  {
-    // if direction the same, just return amount
-    if(_from == _to)
-       return _amount;
-
-    // try get rate
-    try oneInchPrice.getRate(
-       IERC20(_from),
-       IERC20(_to)
-     )
-      returns(uint256 weightedRate)
-     {
-       value = _amount.mul(weightedRate);
-     }
-     catch{
-       value = 0;
-     }
   }
 
 
@@ -455,9 +425,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     disabledTokens[_token] = _enabled;
   }
 
-  // owner can change oneInch
-  function setNewOneInchPrice(address _oneInchPrice) external onlyOwner {
-    oneInchPrice = IOneInchPrice(_oneInchPrice);
+  // owner can change price portal
+  function setNewPricePortal(address _pricePortal) external onlyOwner {
+    pricePortal = IPricePortal(_pricePortal);
   }
 
   // owner can change oneInch
