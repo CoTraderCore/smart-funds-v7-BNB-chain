@@ -5,7 +5,7 @@ import "./openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "./openzeppelin-contracts/contracts/token/ERC20/ERC20Burnable.sol";
 import "./openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract Token is ERC20, ERC20Burnable, Ownable {
+contract MintToken is ERC20, ERC20Burnable, Ownable {
     constructor(uint256 _initSupply) public ERC20("COT", "COT") {
         _mint(msg.sender, _initSupply);
     }
