@@ -5,16 +5,13 @@ import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 contract PricePortal {
   using SafeMath for uint256;
 
-  IOneInchPrice public oneInchPrice = IOneInchPrice(0xe26A18b00E4827eD86bc136B2c1e95D5ae115edD);
-  address constant private ETH_TOKEN_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-
   // helper for get ratio between assets in 1inch aggregator
   function getPrice(
     address _from,
     address _to,
     uint256 _amount
   )
-    public
+    external
     view
     returns (uint256 value)
   {
@@ -22,11 +19,11 @@ contract PricePortal {
     if(_from == _to)
        return _amount;
 
-    address fromAddress = _from == ETH_TOKEN_ADDRESS ? address(0) : _from;
-    address toAddress = _to == ETH_TOKEN_ADDRESS ? address(0) : _to;
+    address fromAddress = _from == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) ? address(0) : _from;
+    address toAddress = _to == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) ? address(0) : _to;
 
     // try get rate
-    try oneInchPrice.getRate(
+    try IOneInchPrice(0xe26A18b00E4827eD86bc136B2c1e95D5ae115edD).getRate(
        fromAddress,
        toAddress
      )
@@ -34,7 +31,7 @@ contract PricePortal {
      {
        uint256 decimalsFrom = getDecimals(_from);
        uint256 decimalsTo = getDecimals(_to);
-       uint256 preConvert = uint256(weightedRate) * (10 ** decimalsFrom) / (10 ** decimalsTo);
+       uint256 preConvert = uint256(weightedRate).mul(10 ** decimalsFrom).div(10 ** decimalsTo);
        value = _amount.mul(preConvert).div(10**decimalsFrom);
      }
      catch{
@@ -43,7 +40,7 @@ contract PricePortal {
   }
 
   function getDecimals(address _from) internal view returns(uint256) {
-    if(_from == ETH_TOKEN_ADDRESS || _from == address(0)){
+    if(_from == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) || _from == address(0)){
       return 18;
     }else{
       return IDecimals(_from).decimals();
