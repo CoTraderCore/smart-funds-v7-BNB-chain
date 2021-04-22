@@ -8,6 +8,14 @@ NOTE: in separate console
 2) truffle test
 ```
 
+# TODO
+
+```
+Add tests
+
+1) Manager can do new take cut if new profit and new profit less than previos
+```
+
 
 # Possible issue
 

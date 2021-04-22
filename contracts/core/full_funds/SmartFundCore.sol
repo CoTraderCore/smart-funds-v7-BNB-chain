@@ -682,7 +682,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       uint256 profit = uint256(int256(fundValue) - curtotalWeiDeposited);
       // remove the money already taken by the fund manager and take percentage
       fundManagerTotalCut = profit.mul(successFee).div(TOTAL_PERCENTAGE);
-      fundManagerRemainingCut = fundManagerTotalCut.sub(fundManagerCashedOut);
+      fundManagerRemainingCut = fundManagerTotalCut > fundManagerCashedOut
+      ? fundManagerTotalCut.sub(fundManagerCashedOut)
+      : 0;
     }
   }
 

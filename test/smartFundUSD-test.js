@@ -848,6 +848,27 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       assert.equal(fundManagerRemainingCut, 0)
       assert.equal(fundManagerTotalCut, 20)
     })
+
+    it('should be able to calcualte calculateFundManagerCut fund manager profit if profit go up manager withdraw then profit go down', async function() {
+      await deployContracts(2000)
+      await fundManagerTest(20)
+
+      await smartFundERC20.fundManagerWithdraw({ from: userOne })
+      await smartFundERC20.calculateFundManagerCut()
+
+      // set big profit
+      await exchangePortal.setRatio(1, 100000000)
+
+      await smartFundERC20.calculateFundManagerCut()
+      // take cut
+      await smartFundERC20.fundManagerWithdraw({ from: userOne })
+      await smartFundERC20.calculateFundManagerCut()
+
+      // set smal profit
+      await exchangePortal.setRatio(1, 1001)
+
+      await smartFundERC20.calculateFundManagerCut()
+    })
   })
 
   describe('Fund Manager profit cut with deposit/withdraw scenarios', function() {
